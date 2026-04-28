@@ -80,27 +80,26 @@ async function startBot() {
     sock.ev.on('creds.update', saveCreds);
 
     const sendMsg = sock.sendMessage.bind(sock);
-    const targetPhrase = 'التسجيل لحجز';
-
+    // 1. تجهيز محرك البحث النصي خارج الدالة ليكون جاهزاً فوراً
+    const targetRegex = /التسجيل لحجز/; 
+    
     const processMessage = (msg) => {
-        const key = msg.key;
-        if (!msg.message || key.fromMe) return;
-
-        const jid = key.remoteJid;
+        // 2. الفشل السريع: إذا لم يكن هناك نص، اخرج فوراً دون استهلاك CPU
+        const txt = msg.message?.conversation || msg.message?.extendedTextMessage?.text;
+        if (!txt || !targetRegex.test(txt)) return;
+    
+        // 3. التحقق من المجموعة (بعد التأكد من النص لتوفير الجهد)
+        const jid = msg.key.remoteJid;
         if (!TARGET_GROUP_SET.has(jid)) return;
-
-        const txt = msg.message.conversation || msg.message.extendedTextMessage?.text;
-        
-        if (txt && txt.indexOf(targetPhrase) !== -1) {
-            const t0 = performance.now(); 
-            
-            sendMsg(jid, { react: { text: '✅', key: key } }).then(() => {
-                lastResponseTime = (performance.now() - t0).toFixed(2);
-                successfulReactions++;
-                console.log(`⚡ ضربة ناجحة! وقت المعالجة الداخلي: ${lastResponseTime}ms`);
-            }).catch(() => {});
-        }
-        totalMessages++;
+    
+        // ⚡ الضربة القاضية: أرسل التفاعل فوراً قبل أي عملية أخرى
+        const t0 = performance.now();
+        sock.sendMessage(jid, { react: { text: '✅', key: msg.key } }).then(() => {
+            // حساب السجلات يتم بعد إتمام المهمة بنجاح
+            lastResponseTime = (performance.now() - t0).toFixed(2);
+            successfulReactions++;
+            console.log(`⚡ استجابة فورية: ${lastResponseTime}ms`);
+        }).catch(() => {});
     };
 
     console.log('🔥 جاري تسخين محرك V8 لأقصى سرعة...');
