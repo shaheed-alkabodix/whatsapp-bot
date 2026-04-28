@@ -62,25 +62,31 @@ async function startBot() {
     // ⚡ محرك الاقتناص (Ultra-Fast Handler)
     // ============================================
     sock.ev.on('messages.upsert', ({ messages, type }) => {
-        if (type !== 'notify' || !messages[0].message) return;
+        if (type !== 'notify') return;
         
-        const msg = messages[0];
-        const txt = msg.message.conversation || msg.message.extendedTextMessage?.text;
-
-        // 1. الفحص السريع (Regex Performance)
-        if (!txt || !targetRegex.test(txt)) return;
-
-        // 2. التحقق من المجموعة
-        const jid = msg.key.remoteJid;
-        if (!TARGET_GROUP_SET.has(jid)) return;
-
-        // 3. التفاعل الفوري
+        // ⚡ قياس الوقت من لحظة وصول الحدث فوراً
         const t0 = performance.now();
-        sock.sendMessage(jid, { react: { text: '✅', key: msg.key } }).then(() => {
-            lastResponseTime = (performance.now() - t0).toFixed(2);
-            successfulReactions++;
-            console.log(`⚡ ضربة ناجحة! الاستجابة: ${lastResponseTime}ms`);
-        }).catch(() => {});
+
+        for (const msg of messages) {
+            if (!msg.message) continue;
+            
+            const txt = msg.message.conversation || msg.message.extendedTextMessage?.text;
+            
+            // 1. الفحص السريع (Regex) - أسرع عملية في البرمجة
+            if (txt && targetRegex.test(txt)) {
+                const jid = msg.key.remoteJid;
+                if (TARGET_GROUP_SET.has(jid)) {
+                    
+                    // 🚀 إرسال التفاعل "بصمت" (Fire and Forget) لأقصى سرعة
+                    sock.sendMessage(jid, { react: { text: '✅', key: msg.key } });
+                    
+                    // حساب الوقت الداخلي قبل تأخير الشبكة
+                    lastResponseTime = (performance.now() - t0).toFixed(2);
+                    successfulReactions++;
+                    console.log(`⚡ تم الاقتناص داخلياً في: ${lastResponseTime}ms`);
+                }
+            }
+        }
     });
 
     // 🔥 تسخين المحرك V8 مسبقاً
