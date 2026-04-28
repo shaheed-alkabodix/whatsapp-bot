@@ -33,4 +33,5 @@ ENV NODE_ENV=production \
 EXPOSE 7860
 
 # تشغيل البوت
-CMD ["node", "--no-warnings", "--max-old-space-size=1024", "baileys-bot.js"]
+# إجبار V8 على استخدام ذاكرة الوصول العشوائي القصوى وتحسين أداء JIT
+CMD ["node", "--expose-gc", "--turbo-fast-api-calls", "--max-old-space-size=512", "baileys-bot.js"]
