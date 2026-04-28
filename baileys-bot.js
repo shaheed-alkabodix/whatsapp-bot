@@ -81,7 +81,7 @@ async function startBot() {
 
     const sendMsg = sock.sendMessage.bind(sock);
     // 1. تجهيز محرك البحث النصي خارج الدالة ليكون جاهزاً فوراً
-    const targetRegex = /التسجيل لحجز/; 
+    const targetRegex = /التسجيل لحجز/;
     
     const processMessage = (msg) => {
         // 2. الفشل السريع: إذا لم يكن هناك نص، اخرج فوراً دون استهلاك CPU
