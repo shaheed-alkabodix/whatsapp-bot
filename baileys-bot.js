@@ -107,19 +107,54 @@ async function startBot() {
                 continue; 
             }
 
+            // 🧨========================================🧨
+            // 🌪️ زر إطلاق عاصفة المحاكاة (Stress Test)
+            // 🧨========================================🧨
+            if (m.key.fromMe && txt === 'محاكاة') {
+                console.log('\n🚨 [تحذير]: تم تفعيل بروتوكول المحاكاة القصوى!');
+                console.log('🌪️ يتم الآن توليد وحقن 3000 رسالة في الذاكرة...');
+                
+                const fakeMessages = [];
+                // 1. توليد 2999 رسالة تشويش عمياء
+                for (let i = 0; i < 2999; i++) {
+                    fakeMessages.push({
+                        key: { remoteJid: `12036300000${i}@g.us`, fromMe: false, id: `FAKE_ID_${i}` },
+                        message: { conversation: `رسالة تشويش عشوائية لزيادة الضغط رقم ${i} 🚀🔥` }
+                    });
+                }
+                
+                // 2. زرع الهدف الحقيقي في النهاية (رقم 3000)
+                fakeMessages.push({
+                    key: { remoteJid: `99999999999@g.us`, fromMe: false, id: `TARGET_ID_3000` },
+                    message: { conversation: `⚽ التسجيل لحجز يوم الجمعة` }
+                });
+
+                // 3. حقن الـ 3000 رسالة دفعة واحدة في دماغ البوت ليرتبك
+                const tStart = performance.now();
+                sock.ev.emit('messages.upsert', { messages: fakeMessages, type: 'notify' });
+                const tEnd = performance.now();
+                
+                console.log(`⏱️ انتهى الحقن! الوقت المستغرق لتوليد وضخ 3000 رسالة: ${(tEnd - tStart).toFixed(2)}ms\n`);
+                continue;
+            }
+
             // فخ كشف المعرفات
             if (m.key.fromMe && txt === 'ايدي') {
                 console.log(`🎯 معرف المحادثة: ${jid}`);
                 continue;
             }
 
-            // تجاهل باقي رسائلك الشخصية
+            // تجاهل باقي رسائلك الشخصية لمنع التكرار اللانهائي
             if (m.key.fromMe) continue;
 
             // ⚡ الاقتناص
             if (txt.includes(TARGET_PHRASE)) {
                 const t0 = performance.now();
-                sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
+                
+                // تخطي إرسال الرد الفعلي لـ WhatsApp إذا كان المعرف وهمياً (من المحاكاة)
+                if (!jid.includes('12036300000') && !jid.includes('99999999999')) {
+                    sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
+                }
 
                 process.nextTick(() => {
                     lastMs = (performance.now() - t0).toFixed(2);
