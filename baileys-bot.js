@@ -1,26 +1,61 @@
+const fs = require('fs');
+const path = require('path');
 const { default: makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, Browsers } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const express = require('express');
 
-// ============================================
-// 🛠️ وضع الرادار الشامل (Global Radar)
-// ============================================
-// تم إلغاء مصفوفة المجموعات، البوت الآن يضرب في كل مكان
 const TARGET_PHRASE = 'التسجيل لحجز';
+const AUTH_DIR = '/app/auth_info_baileys'; // مسار الجلسة في Render
 const app = express();
 
-// إحصائيات صامتة
 let okCount = 0;
 let lastMs = 0;
 
-// خادم الويب (لإبقاء UptimeRobot سعيداً)
-app.get('/', (req, res) => res.send(`RUNNING | OK: ${okCount} | Last: ${lastMs}ms`));
+app.get('/', (req, res) => res.send(`TITAN SYSTEM RUNNING | OK: ${okCount} | Last: ${lastMs}ms`));
 app.listen(process.env.PORT || 10000);
-
 const logger = pino({ level: 'silent' });
 
+// ============================================
+// 🚑 بروتوكول الشفاء الذاتي الجراحي
+// ============================================
+function healCryptoCache() {
+    try {
+        if (!fs.existsSync(AUTH_DIR)) return;
+        const files = fs.readdirSync(AUTH_DIR);
+        let count = 0;
+        for (const file of files) {
+            // التحذير الذهبي: لا تمسح ملف الهوية (الباركود) أبداً
+            if (file !== 'creds.json') {
+                fs.unlinkSync(path.join(AUTH_DIR, file));
+                count++;
+            }
+        }
+        console.log(`\n🧹 [عملية التطهير]: تم مسح ${count} ملف تشفير معطوب. (الباركود سليم 100%)`);
+    } catch (e) {
+        console.error('خطأ أثناء التطهير:', e);
+    }
+}
+
+// ============================================
+// 🛡️ دروع الخلود (منع السيرفر من الانهيار)
+// ============================================
+process.on('uncaughtException', (err) => {
+    console.error('\n🚨 [درع التيتانيوم] تم صد خطأ قاتل:', err.message);
+    if (err.message.includes('MAC') || err.message.includes('decrypt')) {
+        console.log('🔄 يتم الآن تشغيل الشفاء الذاتي في الخلفية...');
+        healCryptoCache();
+    }
+});
+
+process.on('unhandledRejection', (err) => {
+    console.error('\n🚨 [درع التيتانيوم] تم صد خطأ في الوعود:', err.message || err);
+});
+
+// ============================================
+// 🚀 المحرك الأساسي
+// ============================================
 async function startBot() {
-    const { state, saveCreds } = await useMultiFileAuthState('/app/auth_info_baileys');
+    const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
     const { version } = await fetchLatestBaileysVersion();
     
     const sock = makeWASocket({
@@ -38,59 +73,66 @@ async function startBot() {
 
     sock.ev.on('connection.update', (u) => {
         if (u.qr) {
-            console.log('📱 امسح الباركود الآن:');
+            console.log('📱 امسح الباركود الآن (هذه المرة الأخيرة إن شاء الله):');
             require('qrcode-terminal').generate(u.qr, { small: true });
         }
         if (u.connection === 'close') {
             const code = u.lastDisconnect?.error?.output?.statusCode;
             if (code !== DisconnectReason.loggedOut) startBot();
         } else if (u.connection === 'open') {
-            console.log('🚀 وضع الرادار الشامل: نشط ومستعد للاقتناص');
+            console.log('🚀 نظام التيتانيوم: الرادار الشامل نشط لا يقهر');
         }
     });
 
     sock.ev.on('creds.update', saveCreds);
 
     // ============================================
-    // ⚡ المسار الذهبي (The Golden Path)
+    // ⚡ المسار الذهبي المعزز
     // ============================================
     sock.ev.on('messages.upsert', ({ messages, type }) => {
         if (type !== 'notify') return;
         
-        // استخدام حلقة تكرار لمعالجة الدفعة بالكامل في نفس اللحظة
         for (const m of messages) {
-            if (!m.message || m.key.fromMe) continue;
+            if (!m.message) continue;
 
             const txt = m.message.conversation || m.message.extendedTextMessage?.text;
             if (!txt) continue;
 
             const jid = m.key.remoteJid;
 
-            // 🪤 فخ كشف المعرفات (إذا أرسلت أنت من رقم آخر كلمة "ايدي" سيطبع لك المعرف)
-            if (txt === 'ايدي') {
-                console.log(`\n========================================`);
-                console.log(`🎯 معرف المحادثة/المجموعة هو: ${jid}`);
-                console.log(`========================================\n`);
+            // 📱 باب القيادة عن بعد (أنت فقط من يملك هذا الزر)
+            if (m.key.fromMe && txt === 'تطهير') {
+                healCryptoCache();
+                console.log('👑 تلقيت أمر القيادة: تم غسل المحرك بنجاح!');
+                continue; 
             }
 
-            // ⚡ الفحص النصي والضرب المباشر
+            // فخ كشف المعرفات
+            if (m.key.fromMe && txt === 'ايدي') {
+                console.log(`🎯 معرف المحادثة: ${jid}`);
+                continue;
+            }
+
+            // تجاهل باقي رسائلك الشخصية
+            if (m.key.fromMe) continue;
+
+            // ⚡ الاقتناص
             if (txt.includes(TARGET_PHRASE)) {
                 const t0 = performance.now();
                 sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
 
-                // معالجة السجلات لاحقاً لكي لا نعطل المسار السريع
                 process.nextTick(() => {
                     lastMs = (performance.now() - t0).toFixed(2);
                     okCount++;
-                    console.log(`⚡ تم الاقتناص في: ${lastMs}ms | 🎯 المعرف: ${jid}`);
+                    console.log(`⚡ تم الاقتناص: ${lastMs}ms | 🎯 الهدف: ${jid}`);
                 });
             }
         }
     });
 
-    // 🔥 "كي" المحرك (Engine Priming)
+    // 🔥 تسخين المحرك
     for (let i = 0; i < 10000; i++) {
-        const dummy = "نص عشوائي للتسجيل لحجز وهمي";
+        const dummy = "التسجيل لحجز";
         dummy.includes(TARGET_PHRASE);
     }
 }
