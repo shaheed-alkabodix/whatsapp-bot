@@ -3,13 +3,13 @@ const pino = require('pino');
 const express = require('express');
 
 // ============================================
-// 🛠️ المحرك الفائق (Ultra-Fast Engine Config)
+// 🛠️ وضع الرادار الشامل (Global Radar)
 // ============================================
-const TARGET_IDS = new Set(['120363423769337868@g.us', '120363420793660260@g.us']);
+// تم إلغاء مصفوفة المجموعات، البوت الآن يضرب في كل مكان
 const TARGET_PHRASE = 'التسجيل لحجز';
 const app = express();
 
-// إحصائيات صامتة (خارج المسار السريع لضمان السرعة)
+// إحصائيات صامتة
 let okCount = 0;
 let lastMs = 0;
 
@@ -29,7 +29,7 @@ async function startBot() {
         auth: state,
         browser: Browsers.ubuntu('Chrome'),
         connectTimeoutMs: 60000,
-        keepAliveIntervalMs: 10000, // نبضات قلب سريعة لإبقاء الاتصال "ساخناً"
+        keepAliveIntervalMs: 10000,
         markOnlineOnConnect: false,
         syncFullHistory: false,
         getMessage: async () => ({ conversation: '' }),
@@ -45,49 +45,50 @@ async function startBot() {
             const code = u.lastDisconnect?.error?.output?.statusCode;
             if (code !== DisconnectReason.loggedOut) startBot();
         } else if (u.connection === 'open') {
-            console.log('🚀 وضع الاقتناص الفوري: نشط');
+            console.log('🚀 وضع الرادار الشامل: نشط ومستعد للاقتناص');
         }
     });
 
     sock.ev.on('creds.update', saveCreds);
 
     // ============================================
-    // ⚡ المسار الذهبي (The Golden Path) - السرعة المطلقة
+    // ⚡ المسار الذهبي (The Golden Path)
     // ============================================
     sock.ev.on('messages.upsert', ({ messages, type }) => {
-        // فحص سريع جداً (Bitwise optimization)
         if (type !== 'notify') return;
         
-        const m = messages[0];
-        if (!m.message || m.key.fromMe) return;
+        // استخدام حلقة تكرار لمعالجة الدفعة بالكامل في نفس اللحظة
+        for (const m of messages) {
+            if (!m.message || m.key.fromMe) continue;
 
-        // استخراج النص بأقل استهلاك للذاكرة
-        const txt = m.message.conversation || m.message.extendedTextMessage?.text;
-        
-        // 1. الفحص النصي (Raw Search) - أسرع من Regex في Node.js
-        if (txt && txt.includes(TARGET_PHRASE)) {
-            
-            // 2. فحص المجموعة (JID Check)
+            const txt = m.message.conversation || m.message.extendedTextMessage?.text;
+            if (!txt) continue;
+
             const jid = m.key.remoteJid;
-            if (TARGET_IDS.has(jid)) {
-                
-                // 3. التنفيذ اللحظي (Immediate Execution)
-                // نرسل الطلب فوراً دون انتظار أي حسابات أخرى
+
+            // 🪤 فخ كشف المعرفات (إذا أرسلت أنت من رقم آخر كلمة "ايدي" سيطبع لك المعرف)
+            if (txt === 'ايدي') {
+                console.log(`\n========================================`);
+                console.log(`🎯 معرف المحادثة/المجموعة هو: ${jid}`);
+                console.log(`========================================\n`);
+            }
+
+            // ⚡ الفحص النصي والضرب المباشر
+            if (txt.includes(TARGET_PHRASE)) {
                 const t0 = performance.now();
                 sock.sendMessage(jid, { react: { text: '✅', key: m.key } });
 
-                // 4. معالجة السجلات لاحقاً (Deferred Logging) لكي لا نعطل المسار
+                // معالجة السجلات لاحقاً لكي لا نعطل المسار السريع
                 process.nextTick(() => {
                     lastMs = (performance.now() - t0).toFixed(2);
                     okCount++;
-                    console.log(`⚡ تم الاقتناص: ${lastMs}ms`);
+                    console.log(`⚡ تم الاقتناص في: ${lastMs}ms | 🎯 المعرف: ${jid}`);
                 });
             }
         }
     });
 
     // 🔥 "كي" المحرك (Engine Priming)
-    // تشغيل عمليات بحث وهمية لتدريب مترجم JIT في Node.js على الكود
     for (let i = 0; i < 10000; i++) {
         const dummy = "نص عشوائي للتسجيل لحجز وهمي";
         dummy.includes(TARGET_PHRASE);
